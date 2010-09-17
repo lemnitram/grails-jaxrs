@@ -23,13 +23,15 @@ import grails.converters.JSON
 import grails.converters.XML
 
 import groovy.util.slurpersupport.GPathResult
-import org.apache.commons.logging.*
+
+import org.apache.commons.logging.*
 
 import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.codehaus.groovy.grails.web.converters.JSONParsingParameterCreationListener;
 import org.codehaus.groovy.grails.web.converters.XMLParsingParameterCreationListener;
 import org.codehaus.groovy.grails.web.servlet.mvc.ParameterCreationListener
 import org.codehaus.groovy.grails.web.servlet.mvc.GrailsParameterMap
+import org.codehaus.jackson.map.ObjectMapper
 
 /**
  * Utility class for XML to map conversions.
@@ -42,7 +44,9 @@ class ConverterUtils {
     
     private static def jsonListener = new JSONParsingParameterCreationListener() 
     private static def xmlListener = new XMLParsingParameterCreationListener()
-    
+    // Jackson ObjecMapper is thread-safe (see http://wiki.fasterxml.com/JacksonFAQThreadSafety)
+    private static ObjectMapper mapper = new ObjectMapper()
+
     /**
      * Returns character encoding settings for the given Grails application.
      * 
@@ -72,11 +76,7 @@ class ConverterUtils {
      * Grails application. 
      */
     static String getDefaultJSONEncoding(GrailsApplication application) {
-        def encoding = getConverterConfiguration(JSON.class).encoding
-        if (!encoding) {
-            return getDefaultEncoding(application)
-        }
-        encoding
+        return getDefaultEncoding(application)
     }
     
     /**
@@ -89,13 +89,8 @@ class ConverterUtils {
      * @return a map representing the input JSON stream.
      */
     static Map jsonToMap(InputStream input, String encoding) {
-        def adapter = new RequestStreamAdapter(input)
-        adapter.characterEncoding = encoding
-        adapter.format = 'json'
-        
-        def params = new GrailsParameterMap(adapter)
-        jsonListener.paramsCreated(params)
-        params.iterator().next().value 
+        Map jsonMap = mapper.readValue(input, Map.class)
+        jsonMap
     }
     
     /**
